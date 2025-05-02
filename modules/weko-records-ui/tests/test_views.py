@@ -10,7 +10,7 @@ from invenio_pidstore.models import PersistentIdentifier, PIDStatus
 from mock import patch
 from lxml import etree
 from weko_deposit.api import WekoRecord
-from werkzeug.exceptions import NotFound, InternalServerError ,Forbidden
+from werkzeug.exceptions import NotFound, Forbidden
 from sqlalchemy.orm.exc import MultipleResultsFound
 from jinja2.exceptions import TemplatesNotFound
 from weko_workflow.models import (
@@ -53,6 +53,7 @@ from weko_records_ui.views import (
     preview_able,
     get_uri,
 )
+from weko_records_ui.config import WEKO_RECORDS_UI_MAIL_TEMPLATE_SECRET_GENRE_ID
 
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
 
@@ -435,12 +436,11 @@ def test_get_usage_workflow(app, users, workflows):
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_get_workflow_detail -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
 def test_get_workflow_detail(app,workflows):
     wf = workflows['workflow']
-    ret = get_workflow_detail(wf.id)
-    assert isinstance(wf,WorkFlow)
+    ret,isterm = get_workflow_detail(wf.id)
+    assert isinstance(ret,WorkFlow) and isinstance(isterm,bool)
 
     with pytest.raises(NotFound):
-        ret = get_workflow_detail(0)
-    
+        ret,isterm = get_workflow_detail(0)
 
 # def default_view_method(pid, record, filename=None, template=None, **kwargs):
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_default_view_method -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
@@ -528,6 +528,11 @@ def test_default_view_method(app, records, itemtypes, indexstyle ,users):
                         with patch('weko_records_ui.views.Indexes.get_index',return_value=index):
                             assert default_view_method(recid, record ,'helloworld.pdf').status_code == 200
 
+                        #test No.6(W2023-22 3-5)    
+                        restricted_errorMsg = {"content_file_download": {"expiration_date": 30,"expiration_date_unlimited_chk": False,"download_limit": 10,"download_limit_unlimited_chk": False,},"usage_report_workflow_access": {"expiration_date_access": 500,"expiration_date_access_unlimited_chk": False,},"terms_and_conditions": [],"error_msg":{"key" : "","content" : {"ja" : {"content" : "このデータは利用できません（権限がないため）。"},"en":{"content" : "This data is not available for this user"}}}}
+                        with patch('weko_admin.utils.get_restricted_access' ,return_value = restricted_errorMsg):
+                            assert default_view_method(recid, record ,'helloworld.pdf').status_code == 200
+
 
 # def default_view_method(pid, record, filename=None, template=None, **kwargs):
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_default_view_method2 -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
@@ -582,7 +587,21 @@ def test_default_view_method3(app, records, itemtypes, indexstyle ,users,db_comm
                         del record["item_1617605131499"] # files
                         with pytest.raises(NotFound) : #404
                             default_view_method(recid, record ,'helloworld.pdf')
-                    
+    
+# def default_view_method(pid, record, filename=None, template=None, **kwargs):
+# .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_default_view_method4 -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
+def test_default_view_method4(app, records, itemtypes, indexstyle ,users,db_community):
+    indexer, results = records
+    record = results[0]["record"]
+    recid = results[0]["recid"]
+    with app.test_request_context("?onetime_file_url=example.com%2Ffile_name.pdf"):
+        with patch('weko_records_ui.views.check_original_pdf_download_permission', return_value=True):
+            with patch("weko_records_ui.views.get_search_detail_keyword", return_value={}):
+                with patch("weko_records_ui.views.get_index_link_list", return_value=[]):
+                    with patch("weko_records_ui.views.render_template", return_value=make_response()) as mock_render_template:
+                        default_view_method(recid, record ,'helloworld.pdf')
+                        _, kwargs = mock_render_template.call_args
+                        assert kwargs['onetime_file_name'] == 'file_name.pdf'
 
 # def doi_ish_view_method(parent_pid_value=0, version=0):
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_doi_ish_view_method_acl_guest -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
@@ -1025,7 +1044,7 @@ def test_default_view_method_fix35133(app, records, itemtypes, indexstyle,mocker
 
 # def create_secret_url_and_send_mail(pid:PersistentIdentifier, record:WekoRecord, filename:str, **kwargs) -> str:
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_create_secret_url_and_send_mail -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
-def test_create_secret_url_and_send_mail(app,client,db,users,records):
+def test_create_secret_url_and_send_mail(app,client,db,users,records,db_mailTemplateGenre,db_mailtemplates):
     app.config['WEKO_WORKFLOW_DATE_FORMAT'] = "%Y-%m-%d"
     indexer, results = records
     record = results[1]
@@ -1038,21 +1057,41 @@ def test_create_secret_url_and_send_mail(app,client,db,users,records):
     login_user_via_session(client=client, user=users[id]["obj"] ,email=users[id]["email"])
     with patch('weko_records_ui.views._get_show_secret_url_button',return_value = True):
         with patch('weko_records_ui.views.process_send_mail',return_value = True):
-            # with app.test_request_context():
-            res = client.get(secret_file_url)
-            assert res.status_code == 405
-            
-            res = client.post(secret_file_url ,data=json.dumps({}), content_type='application/json')
-            assert res.status_code == 200
-        with patch('weko_records_ui.views.process_send_mail',return_value = False):
-            with patch("flask.templating._render", return_value=""):
-                res = client.post(secret_file_url ,data=json.dumps({}), content_type='application/json')
-                assert res.status_code == 500
+                #with app.test_request_context():
+                    #W2023-22-2 TestNo.7
+                    res = client.get(secret_file_url)
+                    assert res.status_code == 405
+
+                    #W2023-22-2 TestNo.4
+                    res = client.post(secret_file_url ,data=json.dumps({}), content_type='application/json')
+                    assert res.status_code == 200
+
+    #W2023-22-2 TestNo.6
     with patch('weko_records_ui.views._get_show_secret_url_button',return_value = False):
         with patch('weko_records_ui.views.process_send_mail',return_value = True):
             with patch("flask.templating._render", return_value=""):
                 res = client.post(secret_file_url ,data=json.dumps({}), content_type='application/json')
                 assert res.status_code == 403
+
+
+# .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test_create_secret_url_and_send_mail_2 -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
+def test_create_secret_url_and_send_mail_2(app,client,db,users,records,db_restricted_access_secret):
+    indexer, results = records
+    record = results[1]
+
+    # 79
+    id = 1 #repoadmin
+    secret_file_url = url_for("invenio_records_ui.recid_secret_url"
+                                ,pid_value=results[1]["recid"].pid_value
+                                ,filename=results[1]["filename"])
+    login_user_via_session(client=client, user=users[id]["obj"] ,email=users[id]["email"])
+    with patch('weko_records_ui.views._get_show_secret_url_button',return_value = True):
+        #W2023-22-2 TestNo.5
+            with patch('weko_records_ui.views.process_send_mail',return_value = False):
+                with patch("flask.templating._render", return_value=""):
+                    res = client.post(secret_file_url ,data=json.dumps({}), content_type='application/json')
+                    assert res.status_code == 500
+
 
 # def create_secret_url_and_send_mail(pid:PersistentIdentifier, record:WekoRecord, filename:str, **kwargs) -> str:
 # .tox/c1/bin/pytest --cov=weko_records_ui tests/test_views.py::test__get_show_secret_url_button -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-records-ui/.tox/c1/tmp
@@ -1076,7 +1115,7 @@ def test__get_show_secret_url_button(users,records,id ,is_show):
     role = ["open_access" , "open_no" ,"open_date"]
     for record in results:
         record["record"]['owner'] = users[5]["id"]
-        record["record"]['weko_shared_id'] = users[7]["id"]
+        record["record"]['weko_shared_ids'] = [users[7]["id"]]
         file_data = record["record"].get_file_data()
         if len(file_data) > 0:
             file_data[0].update({'accessrole':role[i%3]})
@@ -1109,7 +1148,7 @@ def test__get_show_secret_url_button2(users,records ,id,is_show):
     role = ["open_access" , "open_no" ,"open_date"]
     for record in results:
         record["record"]['owner'] = users[5]["id"]
-        record["record"]['weko_shared_id'] = users[7]["id"]
+        record["record"]['weko_shared_ids'] = [users[7]["id"]]
         file_data = record["record"].get_file_data()
         if len(file_data) > 0:
             file_data[0].update({'accessrole':role[i%3]})
@@ -1140,7 +1179,7 @@ def test__get_show_secret_url_button3(users,records,id,is_show):
     role = ["open_access" , "open_no" ,"open_date"]
     for record in results:
         record["record"]['owner'] = users[5]["id"]
-        record["record"]['weko_shared_id'] = users[7]["id"]
+        record["record"]['weko_shared_ids'] = [users[7]["id"]]
         file_data = record["record"].get_file_data()
         if len(file_data) > 0:
             file_data[0].update({'accessrole':role[i%3]})

@@ -39,6 +39,10 @@ msgstr ""
 msgid "Mail"
 msgstr ""
 
+#: invenio_mail/admin.py:191
+msgid "Mail Templates"
+msgstr ""
+
 #: invenio_mail/templates/invenio_mail/mail_setting.html:26
 msgid "Life Time"
 msgstr ""
@@ -91,3 +95,12 @@ msgstr "本文"
 msgid "Send"
 msgstr "送信"
 
+# Mail template genre table
+msgid "Notification of secret URL provision"
+msgstr "シークレットURL提供メール"
+
+msgid "Guidance to the application form"
+msgstr "ゲストユーザ申請フォーム案内メール"
+
+msgid "Others"
+msgstr "その他テンプレート"
