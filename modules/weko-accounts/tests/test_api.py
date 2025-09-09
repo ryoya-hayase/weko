@@ -550,10 +550,13 @@ class TestShibUserExtra:
             mocker.resetall()
 
             # _find_organization_name returns False
+            shibuser.shib_user = MagicMock(spec=ShibbolethUser)
+            shibuser.shib_user.shib_roles = MagicMock()
             mock_find_organization_name.return_value = False
             result = shibuser.check_in()
             assert result is None
             shibuser.user.roles.clear.assert_called_once()
+            shibuser.shib_user.shib_roles.clear.assert_called_once()
             mock_assign_user_role.assert_called_once()
             mock_get_roles_to_add.assert_called_once()
             mock_find_organization_name.assert_called_once()
@@ -739,8 +742,7 @@ class TestShibUserExtra:
                 }
 
                 # Mock Role queries
-                mock_role.query.filter_by.return_value.one_or_none.side_effect = [None, None, None, None, None]
-                mock_role.query.filter_by.return_value.one.side_effect = [None]
+                mock_role.query.filter_by.return_value.one_or_none.side_effect = [None, None, None, None]
 
                 mock_create_fqdn.return_value = 'A'
 
@@ -757,7 +759,7 @@ class TestShibUserExtra:
                 shib_user_a._assign_roles_to_user(map_group_names)
 
                 # Assertions
-                assert mock_role.query.filter_by.call_count == 6
+                assert mock_role.query.filter_by.call_count == 4
                 assert mock_datastore.add_role_to_user.call_count == 0
                 assert mock_db_session.commit.call_count == 1
 
@@ -783,8 +785,8 @@ class TestShibUserExtra:
 
                 # Mock Role queries
                 mock_role_instance = MagicMock()
-                mock_role.query.filter_by.return_value.one_or_none.side_effect = [mock_role_instance, mock_role_instance, mock_role_instance,mock_role_instance]
-                mock_role.query.filter_by.return_value.one.side_effect = [mock_role_instance]
+                mock_role.query.filter_by.return_value.one_or_none.side_effect = [
+                    mock_role_instance, mock_role_instance, mock_role_instance,mock_role_instance, mock_role_instance]
 
                 mock_create_fqdn.return_value = 'A'
 
@@ -801,7 +803,7 @@ class TestShibUserExtra:
 
                 # Assertions
                 assert mock_role.query.filter_by.call_count == 5
-                assert mock_datastore.add_role_to_user.call_count == 5
+                assert mock_datastore.add_role_to_user.call_count == 3
                 assert mock_db_session.commit.call_count == 1
 
 # .tox/c1/bin/pytest --cov=weko_accounts tests/test_api.py::TestShibUserExtra::test_assign_roles_to_user_exception -vv -s --cov-branch --cov-report=html --basetemp=/code/modules/weko-accounts/.tox/c1/tmp
@@ -825,8 +827,7 @@ class TestShibUserExtra:
                 }
 
                 # Mock Role queries
-                mock_role.query.filter_by.return_value.one_or_none.side_effect = [None, None, None, None]
-                mock_role.query.filter_by.return_value.one.side_effect = [None]
+                mock_role.query.filter_by.return_value.one_or_none.side_effect = [None, None, None]
 
                 mock_create_fqdn.return_value = 'A'
 
@@ -841,7 +842,7 @@ class TestShibUserExtra:
                     shib_user_a._assign_roles_to_user(map_group_names)
 
                 # Assertions
-                assert mock_role.query.filter_by.call_count == 5
+                assert mock_role.query.filter_by.call_count == 3
                 assert mock_datastore.add_role_to_user.call_count == 0
                 assert mock_db_session.commit.call_count == 1
                 assert mock_db_session.rollback.call_count == 1

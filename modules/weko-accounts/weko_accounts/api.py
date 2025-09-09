@@ -321,6 +321,8 @@ class ShibUser(object):
 
         try:
             if current_app.config['WEKO_ACCOUNTS_SHIB_BIND_GAKUNIN_MAP_GROUPS']:
+                if self.shib_user:
+                    self.shib_user.shib_roles.clear()
                 roles_add = self._get_roles_to_add()
                 if not self._find_organization_name():
                     self._assign_roles_to_user(roles_add)
@@ -420,35 +422,36 @@ class ShibUser(object):
                     if map_group_name.find('/sp/') != -1 or map_group_name.endswith('/admin'):
                         # Skip if the group name contains '/sp/' or ends with '/admin'
                         continue
-                    # ロール名が指定されたプレフィックスで始まるか確認
                     group_name = map_group_name.split('/')[-1]
+                    # Check the mapped role name in the database
+                    role = Role.query.filter_by(name=group_name).one_or_none()
+                    # If the role does not exist, skip to the next iteration
+                    if not role:
+                        continue
+
                     pattern = prefix + f'_{fqdn}_' + role_keyword + r'_[A-Za-z_]+'
                     if re.match(pattern, group_name):
                         # The map_group_name matches the pattern
-                        suffix = group_name.split(role_keyword + "_")[-1]
+                        suffix = group_name.split(role_keyword + '_')[-1]
                         weko_role_name = role_mapping.get(suffix)
                         if weko_role_name:
-                            role = Role.query.filter_by(name=weko_role_name).one_or_none()
-                            if role and role not in self.user.roles:
-                                _datastore.add_role_to_user(self.user, role)
-                                self.shib_user.shib_roles.append(role)
+                            weko_role = Role.query.filter_by(name=weko_role_name).one_or_none()
+                            if weko_role and weko_role not in self.user.roles:
+                                # Add the corresponding WEKO role to the user
+                                _datastore.add_role_to_user(self.user, weko_role)
+                                self.shib_user.shib_roles.append(weko_role)
                     elif group_name == config["sysadm_group"]:
-                        # システム管理者のロールを追加
-                        sysadm_name = current_app.config['WEKO_ADMIN_PERMISSION_ROLE_SYSTEM']
-                        role = Role.query.filter_by(name=sysadm_name).one()
+                        # Add the system administrator role
+                        sysadm_name = current_app.config["WEKO_ADMIN_PERMISSION_ROLE_SYSTEM"]
+                        role = Role.query.filter_by(name=sysadm_name).one_or_none()
                         if role and role not in self.user.roles:
                             _datastore.add_role_to_user(self.user, role)
                             self.shib_user.shib_roles.append(role)
-
-                    # マッピングされたロール名をデータベースでロールを確認
-                    role = Role.query.filter_by(name=group_name).one_or_none()
-                    # ロールが存在し、かつユーザーにまだそのロールが割り当てられていない場合
-                    if role and role not in self.user.roles:
-                        # ユーザーにロールを追加
+                    elif role not in self.user.roles:
+                        # Add role to user
                         _datastore.add_role_to_user(self.user, role)
-                        # Shibbolethユーザーのロールリストに追加
+                        # Add to Shibboleth user's role list
                         self.shib_user.shib_roles.append(role)
-
             db.session.commit()
         except Exception as ex:
             current_app.logger.error(f"Error assigning roles: {ex}")
