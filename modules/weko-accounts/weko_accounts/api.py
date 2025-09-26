@@ -447,7 +447,8 @@ class ShibUser(object):
                         if role and role not in self.user.roles:
                             _datastore.add_role_to_user(self.user, role)
                             self.shib_user.shib_roles.append(role)
-                    elif role not in self.user.roles:
+
+                    if role and role not in self.user.roles:
                         # Add role to user
                         _datastore.add_role_to_user(self.user, role)
                         # Add to Shibboleth user's role list

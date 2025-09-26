@@ -803,7 +803,7 @@ class TestShibUserExtra:
 
                 # Assertions
                 assert mock_role.query.filter_by.call_count == 5
-                assert mock_datastore.add_role_to_user.call_count == 3
+                assert mock_datastore.add_role_to_user.call_count == 5
                 assert mock_db_session.commit.call_count == 1
 
 # .tox/c1/bin/pytest --cov=weko_accounts tests/test_api.py::TestShibUserExtra::test_assign_roles_to_user_exception -vv -s --cov-branch --cov-report=html --basetemp=/code/modules/weko-accounts/.tox/c1/tmp
