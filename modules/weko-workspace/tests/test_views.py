@@ -1296,6 +1296,18 @@ def test_itemregister_save(db,users,location, workflow, app, client,mocker,witho
                 res = client.post(url, json=data)
                 assert res.status_code == 200
 
+
+# .tox/c1/bin/pytest --cov=weko_workspace tests/test_views.py::test_iframe_author_search -v -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-weko_workspace/.tox/c1/tmp
+def test_iframe_author_search(client, users, mocker):
+    url = url_for("weko_workspace.iframe_author_search")
+    login(client=client, email=users[0]['email'])
+    render_mock = mocker.patch("weko_workspace.views.render_template")
+    render_mock.return_value = "IFrame Author Search"
+    res = client.get(url)
+    assert res.status_code == 200
+    render_mock.assert_called_with("weko_workspace/author_search.html")
+
+
 # .tox/c1/bin/pytest --cov=weko_workspace tests/test_views.py::test_dbsession_clean -vv -s --cov-branch --cov-report=term --basetemp=/code/modules/weko-workspace/.tox/c1/tmp
 def test_dbsession_clean(app, db):
     from weko_records.models import ItemTypeName

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% assets "weko_theme_css_bootstrap" %}<link href="{{ ASSET_URL }}" rel="stylesheet">{% endassets %}
+  {% assets "weko_theme_css_buttons" %}<link href="{{ ASSET_URL }}" rel="stylesheet">{% endassets %}
+  <link href="/static/css/weko_workspace/style.css" rel="stylesheet">
+  {% assets "weko_items_authors_search_css" %}<link href="{{ ASSET_URL }}" rel="stylesheet">{% endassets %}
+</head>
+<body style="overflow: hidden;">
+  {% assets "invenio_deposit_dependencies_js" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
+  <script type="text/javascript" src="{{ url_for('static', filename='js/weko_workspace/author_search.js') }}"></script>
+  <div class="container col-sm-12 col-md-12" id="author-search-container" style="box-sizing: border-box;">
+    <div class="row" id="author-search-panel">
+      <div class="col-sm-12 col-md-12">
+        <div class="row">
+          <div class="col-sm-12 col-md-12 textRight">
+            <button type="button" class="btn btn-info" id="add-author-btn"></button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-sm-4 col-md-4">
+            <input type="text" class="form-control" placeholder="" id="search-key">
+          </div>
+          <div class="col-sm-1 col-md-1">
+            <button type="button" class="btn btn-info" id="search-btn"></button>
+          </div>
+          <div class="col-sm-3 col-md-3"></div>
+          <div class="col-sm-4 col-md-4 textRight">
+            <form class="form-inline">
+              <div class="form-group">
+                <label>Display Number</label>
+                <select class="form-control" id="display-number" name="dis_select">
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-sm-12 col-md-12">
+            <table class="table table-striped">
+              <caption></caption>
+              <thead>
+                <tr class="success">
+                  <th class="thWidth" id="table-name"></th>
+                  <th class="thWidth" id="table-mail-address"></th>
+                  <th class="alignCenter"></th>
+                </tr>
+              </thead>
+              <tbody id="author-table-body">
+                <!-- Rows are rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="no-result-alert" class="alert alert-danger col-sm-12 col-md-12" style="display:none;"></div>
+        <div class="row">
+          <div class="col-sm-12 col-md-12 alignCenter">
+            <ul class="pagination" id="author-pagination"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="display: none;" id="add-author-panel">
+      <div id="alerts_search_author"></div>
+      <div class="col-sm-12 col-md-12 panel-padding">
+        <div class="panel panel-default">
+          <table class="table table-striped">
+            <thead>
+              <tr class="success">
+                <th id="add-author-title"></th>
+              </tr>
+            </thead>
+          </table>
+          <div class="panel-body">
+            <!-- Name input -->
+            <div class="row">
+              <div class="col-sm-12 col-md-12 remove-padding-right">
+                <div class="col-sm-1 col-md-1 textRight remove-padding-right" id="author-name-label"></div>
+                <div class="col-sm-11 col-md-11 remove-padding-right remove-padding-left">
+                  <div id="author-names"></div>
+                  <div class="row">
+                    <div class="col-sm-11 col-md-11 textRight remove-padding-right">
+                      <button type="button" class="btn btn-link" id="add-author-name-btn"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <br>
+            <!-- Author ID Input -->
+            <div class="row">
+              <div class="col-sm-12 col-md-12 remove-padding-right">
+                <div class="col-sm-1 col-md-1 textRight remove-padding-right" id="author-id-label"></div>
+                <div class="col-sm-11 col-md-11 remove-padding-right remove-padding-left">
+                  <div id="author-ids"></div>
+                  <div class="row">
+                    <div class="col-sm-11 col-md-11 textRight remove-padding-right">
+                      <button type="button" class="btn btn-link" id="add-author-id-btn"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <br>
+            <!-- Email input -->
+            <div class="row">
+              <div class="col-sm-12 col-md-12 remove-padding-right">
+                <div class="col-sm-1 col-md-1 textRight remove-padding-right" id="author-email-label"></div>
+                <div class="col-sm-11 col-md-11 remove-padding-right remove-padding-left">
+                  <div id="author-emails"></div>
+                  <div class="row">
+                    <div class="col-sm-11 col-md-11 textRight remove-padding-right">
+                      <button type="button" class="btn btn-link" id="add-author-email-btn"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <br>
+            <!-- Community input -->
+            <div class="row">
+              <div class="col-sm-12 col-md-12 remove-padding-right">
+                <div class="col-sm-1 col-md-1 textRight remove-padding-right" id="author-community-label"></div>
+                <div class="col-sm-11 col-md-11 remove-padding-right remove-padding-left">
+                  <div id="author-communities"></div>
+                  <div class="row">
+                    <div class="col-sm-11 col-md-11 textRight remove-padding-right">
+                      <button type="button" class="btn btn-link" id="add-author-community-btn"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <!-- Affiliation Input -->
+            <div class="row">
+              <div class="col-sm-12 col-md-12 remove-padding-right remove-padding-left">
+                <div id="author-affiliations"></div>
+                <div class="row">
+                  <div class="col-sm-12 col-md-12 textRight remove-padding-right">
+                    <div class="col-sm-12 col-md-12 textRight remove-padding-right">
+                      <div class="col-sm-1 col-md-1 textRight remove-padding-right"></div>
+                      <div class="col-sm-11 col-md-11 textRight remove-padding-right remove-padding-left">
+                        <div class="col-sm-12 col-md-12 textRight remove-padding-right">
+                          <div class="col-sm-11 col-md-11 textRight remove-padding-right">
+                            <button type="button" class="btn btn-link" id="add-author-affiliation-btn"></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <br>
+            <!-- Buttons -->
+            <div class="row alignCenter">
+              <div class="col-sm-1 col-md-1 remove-padding-right"></div>
+              <div class="col-sm-9 col-md-9 remove-padding-right remove-padding-left">
+                <button type="button" class="btn btn-info" id="clear-author-btn"></button>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <button type="button" class="btn btn-info" id="save-author-btn"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> 
+</body>
+</html>

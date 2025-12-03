@@ -1026,6 +1026,19 @@ def item_register_save():
 
     return jsonify(result)
 
+
+@workspace_blueprint.route('/iframe/author_search', methods=['GET'])
+@login_required
+def iframe_author_search():
+    """Render author search iframe.
+
+    :return: item_register.html
+    """
+    return render_template(
+        'weko_workspace/author_search.html'
+    )
+
+
 @workspace_blueprint.teardown_request
 @blueprint_itemapi.teardown_request
 def dbsession_clean(exception):

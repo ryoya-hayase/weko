@@ -33,21 +33,20 @@
   {%- endblock css %}
 
   {%- block javascript %}
-  <script src="{{ url_for('static', filename='js/react/react.production.min.js') }}" crossorigin></script>
-  <script src="{{ url_for('static', filename='js/react/react-dom.production.min.js') }}" crossorigin></script>
-  <script src="{{ url_for('static', filename='js/babel-cores/browser.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/axios/axios.min.js') }}"></script>
+    {% assets "weko_theme_js_widget" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
+    <script src="{{ url_for('static', filename='js/react/react.production.min.js') }}" crossorigin></script>
+    <script src="{{ url_for('static', filename='js/react/react-dom.production.min.js') }}" crossorigin></script>
+    <script src="{{ url_for('static', filename='js/babel-cores/browser.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/axios/axios.min.js') }}"></script>
 
+    <script src="{{ url_for('static', filename='js/weko_items_ui/oapolicy.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     {% assets "invenio_deposit_dependencies_js" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
     {% assets "weko_admin_react_bootstrap_js" %}<script type="text/javascript" src="{{ ASSET_URL }}"></script>{% endassets %}
     {{ super() }}
     {% assets "invenio_deposit_js" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
-
     <script src="{{ url_for('static', filename='js/weko_workspace/workspace_register.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/weko_items_ui/oapolicy.js') }}"></script>
-    <!-- {% assets "weko_items_authors_search_js" %}<script src="{{ ASSET_URL }}"></script>{% endassets %} -->
     {% assets "weko_items_ui_js_dependencies" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
-    {% assets "weko_theme_js_widget" %}<script src="{{ ASSET_URL }}"></script>{% endassets %}
   {%- endblock javascript %}
  
   {%- block page_header %}
@@ -199,7 +198,7 @@
                 <div ng-show="false" type="text" id="array_flg" ></div>
                 <div ng-show="false" type="text" id="array_index" ></div>
                 <div ng-show="false" type="text" id="weko_id" ></div>
-                <button ng-show="false" id="btn_setAuthorInfo" class="btn btn-default" type="button" ng-click="setAuthorInfo()"></button>
+                <!-- <button ng-show="false" id="btn_setAuthorInfo" class="btn btn-default" type="button" ng-click="setAuthorInfo()"></button> -->
                 <button ng-show="false" id="btn_setItemMetadata" class="btn btn-default" type="button" ng-click="setItemMetadata()"></button>
                 {%- if need_file %}
                 <div class="panel panel-default" class="col-sm-12">
@@ -441,6 +440,27 @@
       </div>
     </div>
   </div>
+  {# Author search modal START #}
+  <div class="modal fade" tabindex="-1" role="dialog" id="app-author-search">
+    <div class="modal-dialog modal-xlg" role="document">
+      <div class="modal-content">
+        <div class="modal-body">
+          <iframe
+            id="author_search_iframe"
+            src="{{ url_for('weko_workspace.iframe_author_search') }}"
+            style="width:100%; border:none; display:block;">
+          </iframe>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-info close-button" id="btnModalClose">
+            <span class="glyphicon glyphicon-remove"></span>
+            {{_('Close')}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {# Author search modal END #}
     
   <script>
     window.onload = function() {

@@ -12,7 +12,10 @@ require([
   });
   $("#btnModalClose").click(function () {
     //Process close 'Add Author' or 'Import Author' modal.
-    window.appAuthorSearch.namespace.isCloseAuthorModal();
+    var iframe = document.getElementById('author_search_iframe')
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'CLOSE_AUTHOR_SEARCH' }, '*');
+    }
   });
   $("#meta-search-close").click(function () {
     $('#meta-search').modal('toggle');
@@ -493,6 +496,7 @@ function toObject(arr) {
       $scope.outputapplication_keys = [];
       $scope.authors_keys = [];
       $scope.data_author = [];
+      $scope.data_affiliation = [];
       $scope.sub_item_keys = ['nameIdentifiers', 'creatorAffiliations', 'contributorAffiliations'];
       $scope.scheme_uri_mapping = [
         {
@@ -1925,6 +1929,9 @@ function toObject(arr) {
         $scope.setDataForLicenseType();
         $scope.autoSetTitle();
         $scope.autoTitleData();
+        $scope.initAuthorList();
+        $scope.initAffiliationList();
+        $scope.getDataAuthors();
         $scope.updateNumFiles();
         let usage_type = $("#auto_fill_usage_data_usage_type").val();
         // Auto fill for Usage Application & Usage Report
@@ -3654,7 +3661,241 @@ function toObject(arr) {
           subitem_dataset_usage : dataType.join(",")
         };
       }
-  }
+
+      /**
+       * Search schema identifier key for author-related fields.
+       * @param {string} item Sub-item key to search.
+       */
+      $scope.searchSchemaIdentifierKey = function(item) {
+        for (let key in $rootScope.recordsVM.invenioRecordsSchema.properties) {
+          var value = $rootScope.recordsVM.invenioRecordsSchema.properties[key];
+          var properties = value.properties ? value.properties : (value.items ? value.items.properties : [])
+          if (Object.keys(properties).indexOf(item) >= 0) {
+            if ($scope.authors_keys.indexOf(key) >= 0) {
+              break;
+            }
+            $scope.authors_keys.push(key);
+          }
+        }
+      };
+
+      /**
+       * Get data for author name identifier schemes
+       */
+      $scope.initAuthorList = function () {
+        $.ajax({
+          url: '/api/items/author_prefix_settings',
+          method: 'GET',
+          async: false,
+          success: function (data, status) {
+            $scope.data_author = data;
+          },
+          error: function (data, status) {
+          }
+        });
+      }
+
+      /* Get data for affiliation*/
+      $scope.initAffiliationList = function () {
+        $.ajax({
+          url: '/api/items/author_affiliation_settings',
+          method: 'GET',
+          async: false,
+          success: function (data, status) {
+            $scope.data_affiliation = data;
+          },
+          error: function (data, status) {
+          }
+        });
+      }
+
+      /**
+       * Updates author select forms in the schema by adding available schemes.
+       */
+      $scope.getDataAuthors = function () {
+        var author_schema;
+        var author_form;
+        $scope.sub_item_keys.map(function(key) {
+          $scope.searchSchemaIdentifierKey(key);
+        })
+        $scope.authors_keys.forEach(function (author_key) {
+          var author_idt_schema = $rootScope.recordsVM.invenioRecordsSchema.properties[author_key];
+          var author_idt_form = $scope.searchForm(author_key);
+          if (author_idt_schema && author_idt_form) {
+            if (author_idt_schema.type == 'object') {
+              $scope.sub_item_keys.map(function (item) {
+                if (!!author_idt_schema.properties[item]){
+                  author_schema = author_idt_schema.properties[item].items;
+                  author_form = get_subitem(author_idt_form.items, item);
+                  if (typeof author_form != 'undefined' && typeof author_schema != 'undefined') {
+                    $scope.addSchemeToSelectForm(author_form, author_schema);
+                  }
+                }
+              })
+            }
+            else if (author_idt_schema.type == 'array') {
+              $scope.sub_item_keys.map(function (item) {
+                if (!!author_idt_schema.items.properties[item]) {
+                  author_schema = author_idt_schema.items.properties[item].items;
+                  author_form = get_subitem(author_idt_form.items, item);
+                  if (typeof author_form != 'undefined' && typeof author_schema != 'undefined') {
+                    $scope.addSchemeToSelectForm(author_form, author_schema);
+                  }
+                }
+              })
+            }
+          }
+        });
+        $rootScope.$broadcast('schemaFormRedraw');
+      };
+
+      /**
+       * Disable Name Identifier when schema is WEKO.
+       */
+      $scope.disableNameIdentifier = function () {
+        setTimeout(function () {
+          $("select[name*='nameIdentifierScheme'], " +
+            "select[name*='affiliationNameIdentifierScheme']," +
+            "select[name*='contributorAffiliationScheme']")
+            .each(function () {
+              let val = $(this).val();
+              if (val && val.split(":").length > 1
+                && val.split(":")[1] === "WEKO") {
+                $(this).closest('li')
+                  .find('input, select')
+                  .attr('disabled', true);
+              }else{
+                $(this).closest('li')
+                  .find('input, select')
+                  .attr('disabled', false);
+              }
+            });
+        }, 1000);
+      }
+
+      /**
+       * Open the author search modal.
+       * @param model_id Model ID
+       * @param arrayFlg Array flag
+       * @param form Form object
+       */
+      $scope.searchAuthor = function (model_id, arrayFlg, form) {
+        model_id = model_id.replace("[]", "");
+        // add by ryuu. start 20180410
+        $("#btn_id").text(model_id);
+        $("#array_flg").text(arrayFlg);
+        $("#array_index").text(form.key[1]);
+        // add by ryuu. end 20180410
+        //Reset data before show modal 'myModal'.
+        var iframe = document.getElementById('author_search_iframe')
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'RESET_AUTHOR_SEARCH' }, '*');
+        }
+        $('#app-author-search').modal('show');
+      }
+
+      // add by ryuu. start 20180410
+      /**
+       * Set author information to the model.
+       * @param authorData Author data in JSON string
+       */
+      $scope.setAuthorInfo = function (authorData) {
+        var arrayFlg = $('#array_flg').text();
+        var modelId = $('#btn_id').text();
+        var array_index = $('#array_index').text();
+        var authorInfoObj = JSON.parse(authorData);
+        let creatorModel;
+        var author_name = authorInfoObj[0].author_name;
+        var author_mail = authorInfoObj[0].author_mail;
+        var author_affiliation = authorInfoObj[0].author_affiliation;
+        if (arrayFlg == 'true' && Number.isInteger(parseInt(array_index))) {
+          creatorModel = $rootScope.recordsVM.invenioRecordsModel[modelId][array_index];
+        } else {
+          creatorModel = $rootScope.recordsVM.invenioRecordsModel[modelId];
+        }
+        angular.forEach(authorInfoObj, function (value, key) {
+          //creatorModel.creatorAffiliations = value.hasOwnProperty('creatorAffiliations') ? value.creatorAffiliations : [{}];
+          creatorModel.creatorAlternatives = value.hasOwnProperty('creatorAlternatives') ? value.creatorAlternatives : [{}];
+          creatorModel.familyNames = value.hasOwnProperty('familyNames') ? value.familyNames : [{}];
+          creatorModel.givenNames = value.hasOwnProperty('givenNames') ? value.givenNames : [{}];
+          creatorModel.nameIdentifiers = value.hasOwnProperty('nameIdentifiers') ? value.nameIdentifiers : [{}];
+          //creatorName = familyName + givenName
+          angular.forEach(author_name, function (v, k) {
+            if (creatorModel.hasOwnProperty(k)) {
+              if (value.hasOwnProperty('familyNames') && value.hasOwnProperty('givenNames')) {
+                if (!value.hasOwnProperty('creatorNames')) {
+                  creatorModel[k] = [];
+                }
+                for (var i = 0; i < value.familyNames.length; i++) {
+                  let subCreatorName = { "creatorName": "", "creatorNameLang": "" };
+                  let familyName = value.familyNames[i].familyName ? value.familyNames[i].familyName.trim() : '';
+                  let givenName = value.givenNames[i].givenName ? value.givenNames[i].givenName.trim() : '';
+                  const showComma = (familyName && givenName) && familyName.indexOf(',', familyName.length - 1) === -1 ? ', ' : '';
+                  subCreatorName.creatorName = familyName + showComma + givenName;
+                  subCreatorName.creatorNameLang = value.familyNames[i].familyNameLang;
+                  subCreatorName = JSON.parse(JSON.stringify(subCreatorName).replace('creatorName', v[0]).replace('creatorNameLang', v[1]));
+                  creatorModel[k].push(subCreatorName);
+                }
+              }
+            }
+          });
+          angular.forEach(author_mail, function (v, k) {
+            if (creatorModel.hasOwnProperty(k)) {
+              let subMail = value.hasOwnProperty('creatorMails') ? value.creatorMails : [{}];
+              subMail = JSON.parse(JSON.stringify(subMail).replace('creatorMail', v));
+              creatorModel[k] = subMail;
+            }
+          });
+          angular.forEach(author_affiliation, function (v, k) {
+            if (creatorModel.hasOwnProperty(k)) {
+              const namesKey = v.names.key;
+              const namesNameKey = v.names.values.name;
+              const namesLangKey = v.names.values.lang;
+              const identifiersKey = v.identifiers.key;
+              const identifiersIdentifierKey = v.identifiers.values.identifier;
+              const identifiersUriKey = v.identifiers.values.uri;
+              const identifiersSchemeKey = v.identifiers.values.scheme;
+              creatorModel[k] = [];
+              for (var i = 0; i < value.creatorAffiliations.length; i++) {
+                let affiliation = value.creatorAffiliations[i];
+                let affiliationData = {[namesKey]: [], [identifiersKey]: []};
+                for (var j = 0; j < affiliation.affiliationNames.length; j++) {
+                  let affiliationNames = affiliation.affiliationNames[j];
+                  let affiliationNamesData = {};
+                  affiliationNamesData[namesNameKey] = affiliationNames.affiliationName;
+                  affiliationNamesData[namesLangKey] = affiliationNames.affiliationNameLang;
+                  affiliationData[namesKey].push(affiliationNamesData)
+                }
+                for (var j = 0; j < affiliation.affiliationNameIdentifiers.length; j++) {
+                  let affiliationIdentifiers = affiliation.affiliationNameIdentifiers[j];
+                  let affiliationIdentifiersData = {};
+                  affiliationIdentifiersData[identifiersIdentifierKey] = affiliationIdentifiers.affiliationNameIdentifier;
+                  affiliationIdentifiersData[identifiersUriKey] = affiliationIdentifiers.affiliationNameIdentifierURI;
+                  affiliationIdentifiersData[identifiersSchemeKey] = affiliationIdentifiers.affiliationNameIdentifierScheme;
+                  affiliationData[identifiersKey].push(affiliationIdentifiersData)
+                }
+                creatorModel[k].push(affiliationData)
+              }
+            }
+          });
+        });
+        // Set data to the screen
+        $("#btn_id").text('');
+        $("#author_info").text('');
+        $("#array_flg").text('');
+
+        // Apply scope changes
+        $scope.$apply()
+
+        // Disable Name Identifier when schema is WEKO.
+        setTimeout(function () {
+          $scope.disableNameIdentifier();
+        }, 0);
+
+        // Hide the modal
+        $('#app-author-search').modal('hide');
+      }
+    }
     // Inject depedencies
     WekoRecordsCtrl.$inject = [
       '$scope',
@@ -3756,3 +3997,23 @@ function toObject(arr) {
   });
 
 })(angular);
+
+// Handle messages from author search iframe
+window.addEventListener('message', function(event) {
+  if (event.data) {
+    if (event.data.type === 'AUTHOR_SEARCH_IFRAME_HEIGHT') {
+      // Adjust iframe height
+      var iframe = document.getElementById('author_search_iframe');
+      if (iframe && event.data.height) {
+        iframe.style.height = event.data.height + 'px';
+      }
+    } else if (event.data.type === 'CLOSE_AUTHOR_MODAL') {
+      // Hide the modal
+      $('#app-author-search').modal('hide');
+    } else if (event.data.type === 'IMPORT_AUTHOR_DATA') {
+      // Set author information to the model
+      var scope = window.angular.element(document.querySelector('[ng-controller=\"WekoRecordsCtrl\"]')).scope();
+      scope.setAuthorInfo(event.data.authorData);
+    }
+  } 
+});
