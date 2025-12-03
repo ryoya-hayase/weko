@@ -81,13 +81,13 @@
       communityIds: [""],
       affiliationInfo: [{
         identifierInfo: [{
-          idType: "1",
+          affiliationIdType: "1",
           affiliationId: "",
-          affiliationShowFlg: "true"
+          identifierShowFlg: "true"
         }],
         affiliationNameInfo: [{
           affiliationName: "",
-          language: "ja",
+          affiliationNameLang: "ja",
           affiliationNameShowFlg: "true"
         }],
         affiliationPeriodInfo: [{
@@ -575,6 +575,11 @@
       searchAuthors(1, searchKey, numberOfpage);
     });
 
+    // Alert close button event
+    $(document).on('click', '#alerts_search_author .alert .close', function() {
+      $(this).closest('.alert').remove();
+    });
+
     // Add author name
     $(document).on('click', '#add-author-name-btn', function() {
       authorData.authorNameInfo.push({ ...getDefaultAuthorData().authorNameInfo[0] });
@@ -609,6 +614,13 @@
         authorData.authorIdInfo[0] = { ...getDefaultAuthorData().authorIdInfo[0] };
       }
       renderAuthorIds();
+    });
+
+    // Author ID type change event
+    $(document).on('change', '.author-id-type', function() {
+      var idx = $(this).data('index');
+      var idType = $(this).val();
+      authorData.authorIdInfo[idx].idType = idType;
     });
 
     // Author ID input event
@@ -1063,9 +1075,9 @@
       let html = '<div class="">';
       html += '<div class="col-sm-12 col-md-12 divBottom remove-padding-right">';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right">';
-      html += '<select class="form-control aff-identifier-type" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="idType">';
+      html += '<select class="form-control aff-identifier-type" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="affiliationIdType">';
       affiliationIdOptions.forEach(function(opt) {
-        html += '<option value="' + opt.id + '"' + (item.idType === opt.id ? ' selected' : '') + '>' + opt.name + '</option>';
+        html += '<option value="' + opt.id + '"' + (item.affiliationIdType === opt.id ? ' selected' : '') + '>' + opt.name + '</option>';
       });
       html += '</select>';
       html += '</div>';
@@ -1079,8 +1091,8 @@
       html += '</div>';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right">';
       html += '<div class="col-sm-12 col-md-12 alignCenter remove-padding-right">';
-      html += '<input type="radio" name="affiliationIdRadio_' + affIdx + '_' + j + '" value="true"' + (item.affiliationShowFlg === 'true' ? ' checked' : '') + ' data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="affiliationShowFlg">&nbsp;' + window.authorLangJson.Author_Display[1];
-      html += '<input type="radio" name="affiliationIdRadio_' + affIdx + '_' + j + '" value="false"' + (item.affiliationShowFlg === 'false' ? ' checked' : '') + ' data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="affiliationShowFlg">&nbsp;' + window.authorLangJson.Author_Hide[1];
+      html += '<input type="radio" name="affiliationIdRadio_' + affIdx + '_' + j + '" value="true"' + (item.identifierShowFlg === 'true' ? ' checked' : '') + ' data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="identifierShowFlg">&nbsp;' + window.authorLangJson.Author_Display[1];
+      html += '<input type="radio" name="affiliationIdRadio_' + affIdx + '_' + j + '" value="false"' + (item.identifierShowFlg === 'false' ? ' checked' : '') + ' data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="identifierShowFlg">&nbsp;' + window.authorLangJson.Author_Hide[1];
       html += '</div>';
       html += '</div>';
       html += '<div class="col-sm-1 col-md-1">';
@@ -1112,11 +1124,11 @@
       let $btn = $(this);
       let affIdx = $btn.data('aff-index');
       let idx = $btn.data('index');
-      let idType = authorData.affiliationInfo[affIdx].identifierInfo[idx].idType;
+      let affiliationIdType = authorData.affiliationInfo[affIdx].identifierInfo[idx].affiliationIdType;
       let authorId = authorData.affiliationInfo[affIdx].identifierInfo[idx].affiliationId;
       let url_identifier = "";
       affiliationIdOptions.forEach(function(opt) {
-        if (opt.id == idType) {
+        if (opt.id == affiliationIdType) {
           url_identifier = opt.url;
         }
       });
@@ -1146,9 +1158,9 @@
       html += '<input type="text" class="form-control aff-name-input" placeholder="" value="' + (item.affiliationName || '') + '" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="affiliationName">';
       html += '</div>';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right">';
-      html += '<select class="form-control aff-name-lang-option" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="language">';
+      html += '<select class="form-control aff-name-lang-option" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="affiliationNameLang">';
       langOptions.forEach(function(opt) {
-        html += '<option value="' + opt.id + '"' + (item.language === opt.id ? ' selected' : '') + '>' + opt.value + '</option>';
+        html += '<option value="' + opt.id + '"' + (item.affiliationNameLang === opt.id ? ' selected' : '') + '>' + opt.value + '</option>';
       });
       html += '</select>';
       html += '</div>';
