@@ -555,6 +555,13 @@
 
     // Add button event
     $(document).on('click', '#add-author-btn', function() {
+      authorData = getDefaultAuthorData();
+      renderAuthorNames();
+      renderAuthorIds();
+      renderAuthorEmails();
+      renderCommunities();
+      renderAffiliations();
+      $('#alerts_search_author').empty();
       $('#author-search-panel').hide();
       $('#add-author-panel').show();
     });
@@ -812,7 +819,7 @@
         $('#add-author-panel').hide();
         $('#author-search-panel').show();
       }).catch(err => {
-        alert(JSON.parse(err._body).msg);
+        alert(JSON.parse(err.responseText).msg);
       });
     })
   });
@@ -1204,11 +1211,11 @@
       html += '<div class="col-sm-1 col-md-1 remove-padding-right"></div>';
       html += '<div class="col-sm-1 col-md-1 textRight remove-padding-right">' + window.authorLangJson.Author_Affiliation_Period_Start[1] + '</div>';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right">';
-      html += '<input type="text" class="form-control aff-period-start" placeholder="' + placeholderForDate + '" value="' + (item.startDate || '') + '" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="startDate">';
+      html += '<input type="text" class="form-control aff-period-start" placeholder="' + placeholderForDate + '" value="' + (item.periodStart || '') + '" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="periodStart">';
       html += '</div>';
       html += '<div class="col-sm-1 col-md-1 textRight remove-padding-right">' + window.authorLangJson.Author_Affiliation_Period_End[1] + '</div>';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right">';
-      html += '<input type="text" class="form-control aff-period-end" placeholder="' + placeholderForDate + '" value="' + (item.endDate || '') + '" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="endDate">';
+      html += '<input type="text" class="form-control aff-period-end" placeholder="' + placeholderForDate + '" value="' + (item.periodEnd || '') + '" data-aff-index="' + affIdx + '" data-index="' + j + '" data-field="periodEnd">';
       html += '</div>';
       html += '<div class="col-sm-2 col-md-2 remove-padding-right"></div>';
       html += '<div class="col-sm-1 col-md-1">';
