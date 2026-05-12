@@ -1596,6 +1596,26 @@ WHERE EXCLUDED.id = 11;
 
 SELECT pg_catalog.setval('public.mail_templates_id_seq', 16, true);
 
+--
+-- CREATE TABLE mail_template_users
+--
+PERFORM 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = current_schema() AND t.typname = 'mailtype';
+IF NOT FOUND THEN
+    CREATE TYPE mailtype AS ENUM ('RECIPIENT', 'CC', 'BCC');
+END IF;
+CREATE TABLE IF NOT EXISTS mail_template_users (
+    created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    template_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    mail_type mailtype NOT NULL,
+    CONSTRAINT pk_mail_template_users PRIMARY KEY (template_id, user_id, mail_type),
+    CONSTRAINT fk_mail_template_users_template_id_mail_templates
+        FOREIGN KEY (template_id) REFERENCES mail_templates(id) ON DELETE CASCADE,
+    CONSTRAINT fk_mail_template_users_user_id_accounts_user
+        FOREIGN KEY (user_id) REFERENCES accounts_user(id) ON DELETE CASCADE
+);
+
 -- 
 -- Upsert admin_settings to enable restricted access features
 --
